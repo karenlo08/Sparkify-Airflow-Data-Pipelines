@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import os
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators import (StageToRedshiftOperator, LoadFactOperator,
+from airflow.operators import (CreateTableOperator, StageToRedshiftOperator, LoadFactOperator,
                                 LoadDimensionOperator, DataQualityOperator)
 from helpers import SqlQueries
 
@@ -22,9 +22,22 @@ dag = DAG('udac_example_dag',
 
 start_operator = DummyOperator(task_id='Begin_execution',  dag=dag)
 
+create_tables_in_redshift = CreateTableOperator(
+  task_id='create_tables_in_redshift',
+  redshift_conn_id = 'redshift',
+  dag = dag
+)
+
 stage_events_to_redshift = StageToRedshiftOperator(
     task_id='Stage_events',
-    dag=dag
+    dag=dag,
+    provide_context = True,
+    aws_credentials_id="aws_credentials",
+    redshift_conn_id='redshift',
+    table_name = "staging_events",
+    s3_bucket = "udacity-dend-warehouse",
+    s3_key = "log-data"
+
 )
 
 stage_songs_to_redshift = StageToRedshiftOperator(
